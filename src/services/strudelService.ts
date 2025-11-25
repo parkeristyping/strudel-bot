@@ -1,37 +1,61 @@
-import { evaluate } from '@strudel/core';
-import { getAudioContext, initAudioOnFirstClick, webaudioOutput } from '@strudel/webaudio';
+// Declare the strudel-editor custom element type
+declare global {
+  interface HTMLElementTagNameMap {
+    'strudel-editor': StrudelEditor;
+  }
+}
+
+interface StrudelEditor extends HTMLElement {
+  editor: {
+    setCode: (code: string) => void;
+    start: () => void;
+    stop: () => void;
+    evaluate: () => Promise<void>;
+  };
+  setAttribute: (name: string, value: string) => void;
+}
 
 export class StrudelService {
+  private editorElement: StrudelEditor | null = null;
   private isInitialized = false;
-  private currentPattern: any = null;
 
   async initialize() {
-    if (this.isInitialized) return;
+    if (this.isInitialized && this.editorElement) return;
 
-    // Initialize audio context on user interaction
-    await initAudioOnFirstClick();
+    // Create the strudel-editor element
+    this.editorElement = document.createElement('strudel-editor') as StrudelEditor;
+
+    // Set initial empty code
+    this.editorElement.setAttribute('code', '');
+
+    // Hide the editor (we only need the audio engine, not the visual editor)
+    this.editorElement.style.display = 'none';
+
+    // Append to body
+    document.body.appendChild(this.editorElement);
+
+    // Wait a bit for the editor to initialize
+    await new Promise(resolve => setTimeout(resolve, 500));
+
     this.isInitialized = true;
   }
 
   async evaluateCode(code: string) {
     try {
-      if (!this.isInitialized) {
+      if (!this.isInitialized || !this.editorElement) {
         await this.initialize();
       }
 
-      // Stop current pattern if running
-      if (this.currentPattern) {
-        this.currentPattern.stop();
+      if (!this.editorElement?.editor) {
+        throw new Error('Strudel editor not properly initialized');
       }
 
-      // Evaluate the Strudel code using the evaluate function
-      const pattern = evaluate(code);
+      // Set the new code
+      this.editorElement.editor.setCode(code);
 
-      // Start playing the pattern
-      this.currentPattern = pattern.play({
-        output: webaudioOutput,
-        getTime: () => getAudioContext().currentTime,
-      });
+      // Evaluate and start playback
+      await this.editorElement.editor.evaluate();
+      this.editorElement.editor.start();
 
       return { success: true };
     } catch (error) {
@@ -41,14 +65,15 @@ export class StrudelService {
   }
 
   stop() {
-    if (this.currentPattern) {
-      this.currentPattern.stop();
-      this.currentPattern = null;
+    if (this.editorElement?.editor) {
+      this.editorElement.editor.stop();
     }
   }
 
   isPlaying(): boolean {
-    return this.currentPattern !== null;
+    // For now, we'll track this separately since the web component
+    // doesn't expose a direct isPlaying() method
+    return this.isInitialized && this.editorElement !== null;
   }
 }
 
