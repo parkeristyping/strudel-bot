@@ -1,4 +1,4 @@
-import { repl } from '@strudel/core';
+import { evaluate } from '@strudel/core';
 import { getAudioContext, initAudioOnFirstClick, webaudioOutput } from '@strudel/webaudio';
 
 export class StrudelService {
@@ -13,7 +13,7 @@ export class StrudelService {
     this.isInitialized = true;
   }
 
-  async evaluate(code: string) {
+  async evaluateCode(code: string) {
     try {
       if (!this.isInitialized) {
         await this.initialize();
@@ -24,14 +24,14 @@ export class StrudelService {
         this.currentPattern.stop();
       }
 
-      // Evaluate the Strudel code
-      const { pattern } = repl({
-        defaultOutput: webaudioOutput,
+      // Evaluate the Strudel code using the evaluate function
+      const pattern = evaluate(code);
+
+      // Start playing the pattern
+      this.currentPattern = pattern.play({
+        output: webaudioOutput,
         getTime: () => getAudioContext().currentTime,
       });
-
-      // Execute the code and play
-      this.currentPattern = await pattern(code);
 
       return { success: true };
     } catch (error) {

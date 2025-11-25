@@ -1,5 +1,6 @@
 declare module '@strudel/core' {
   export function repl(config: any): any;
+  export function evaluate(code: string): any;
   export const controls: any;
 }
 

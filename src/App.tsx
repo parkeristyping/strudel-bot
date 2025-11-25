@@ -42,7 +42,7 @@ function App() {
       }));
 
       // Evaluate the new code in Strudel
-      const result = await strudelService.evaluate(newLog.strudelCode);
+      const result = await strudelService.evaluateCode(newLog.strudelCode);
 
       if (!result.success) {
         console.error('Failed to evaluate Strudel code:', result.error);
